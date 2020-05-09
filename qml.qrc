@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>qml/BlurItem.qml</file>
+        <file>qml/ContrastItem.qml</file>
+        <file>qml/SaveItem.qml</file>
+    </qresource>
+</RCC>
