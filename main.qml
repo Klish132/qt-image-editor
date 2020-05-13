@@ -116,6 +116,24 @@ Window {
             }
         }
         Button {
+            id: sharpenButton
+            width: 50
+            height: 40
+            text: "Sharpen"
+            enabled: hasImage
+            checkable: true
+
+        }
+        SharpenItem {
+            id: sharpenItem
+            anchors.top: sharpenButton.bottom
+            anchors.left: sharpenButton.right
+            visible: sharpenButton.checked
+            onClicked: {
+                paintedItem.sharpenImage(sharpenItem.value)
+            }
+        }
+        Button {
             id: saveButton
             width: 50
             height: 40

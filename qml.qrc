@@ -4,5 +4,6 @@
         <file>qml/BlurItem.qml</file>
         <file>qml/ContrastItem.qml</file>
         <file>qml/SaveItem.qml</file>
+        <file>qml/SharpenItem.qml</file>
     </qresource>
 </RCC>

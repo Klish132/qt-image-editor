@@ -24,8 +24,10 @@ public:
     Q_INVOKABLE void saveImage(QString path, QString quality);
     Q_INVOKABLE void addBackup(QImage newBackup);
     Q_INVOKABLE void loadBackup();
+
     Q_INVOKABLE void blurImage(int radius);
     Q_INVOKABLE void contrastImage(int contrast);
+    Q_INVOKABLE void sharpenImage(int value);
 
     Q_INVOKABLE int getWidth();
     Q_INVOKABLE void setWidth(int newWidth);

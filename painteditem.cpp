@@ -164,7 +164,6 @@ int Truncate(int value) {
 void PaintedItem::contrastImage(int contrast)
 {
     addBackup(currentImage);
-    qDebug() << contrast;
     QImage result = currentImage.convertToFormat(QImage::Format_ARGB32);
     int r1 = currentImage.rect().top();
     int r2 = currentImage.rect().bottom();
@@ -185,6 +184,57 @@ void PaintedItem::contrastImage(int contrast)
         }
     }
     qDebug() << "Finished";
+    currentImage = result;
+    update();
+}
+
+QRgb filterPixel(int value, int r, int c, QImage &tempImage) {
+    float filter1 = (float)value/10;
+    float filter2 = (1 - filter1)/8;
+
+    int counter = 0;
+    int redResult = 0;
+    int greenResult = 0;
+    int blueResult = 0;
+    int alphaResult = 0;
+
+    for (int row = r-1; row <= r+1; row++) {
+        for (int col = c-1; col <= c+1; col++) {
+            QRgb *rowData = (QRgb*)tempImage.scanLine(row);
+            QRgb pixelData = rowData[col];
+            if (counter == 4) {
+                redResult += qRed(pixelData) * filter1;
+                greenResult += qGreen(pixelData) * filter1;
+                blueResult += qBlue(pixelData) * filter1;
+                alphaResult = qAlpha(pixelData);
+            } else {
+                redResult += qRed(pixelData) * filter2;
+                greenResult += qGreen(pixelData) * filter2;
+                blueResult += qBlue(pixelData) * filter2;
+            }
+            counter++;
+        }
+    }
+    return qRgba(Truncate(int(redResult)), Truncate(int(greenResult)), Truncate(int(blueResult)), alphaResult);
+}
+
+void PaintedItem::sharpenImage(int value)
+{
+    addBackup(currentImage);
+    QImage tempImage = currentImage.convertToFormat(QImage::Format_ARGB32);
+    QImage result = currentImage.convertToFormat(QImage::Format_ARGB32);
+
+    int r1 = currentImage.rect().top();
+    int r2 = currentImage.rect().bottom();
+    int c1 = currentImage.rect().left();
+    int c2 = currentImage.rect().right();
+
+    for (int row = r1+1; row <= r2-1; row++) {
+        QRgb *rowData = (QRgb*)result.scanLine(row);
+        for (int col = c1+1; col <= c2-1; col++) {
+            rowData[col] = filterPixel(value, row, col, tempImage);
+        }
+    }
     currentImage = result;
     update();
 }
