@@ -11,11 +11,17 @@ Window {
     visible: true
     height: 640
     width: 480
-    minimumHeight: mainItem.height + 20
+    minimumHeight: mainItem.height + 80
     minimumWidth: mainItem.width + 80
     title: "Image editor"
 
     property bool hasImage: (paintedItem.itemWidth == 0) ? false : true
+    property bool applyModeEnabled: contrastItem.checked || sharpenItem.checked
+
+    Rectangle {
+        id: wrapper
+        anchors.fill: parent
+    }
 
     FileDialog {
         id: openDialog
@@ -24,10 +30,10 @@ Window {
         nameFilters: [ "Image files (*.jpg *.png)", "All files (*)" ]
         onAccepted: {
             var urlNoProtocol = (openDialog.fileUrl+"").replace('file:///', '');
-            paintedItem.setImage(urlNoProtocol)
-            paintedItem.fitToitem(mainItem.height, mainItem.width)
+            paintedItem.setImage(urlNoProtocol, 500, 500)
         }
     }
+
     FileDialog {
         id: saveDialog
         title: "Save image"
@@ -38,12 +44,14 @@ Window {
                 paintedItem.saveImage(urlNoProtocol, saveItem.quality)
             }
         }
+
     Item {
         id: mainItem
-        width: 500
-        height: 500
+        width: (hasImage == true) ? paintedItem.width : 500
+        height: (hasImage == true) ? paintedItem.height : 500
         anchors.verticalCenter: parent.verticalCenter
-        anchors.horizontalCenter: parent. horizontalCenter
+        anchors.verticalCenterOffset: 20
+        anchors.horizontalCenter: parent.horizontalCenter
         anchors.horizontalCenterOffset: 30
         PaintedItem {
             id: paintedItem
@@ -52,7 +60,55 @@ Window {
             anchors.top: parent.top
             anchors.left: parent.left
         }
+        MouseArea {
+            id: itemMouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            property bool held: false
+            property bool containsCursor: (mouseX > 0 && mouseX < parent.width && mouseY > 0 && mouseY < parent.height) ? true : false
+            property int timing: 0
+            onPressed: {
+                if (applyModeEnabled){
+                    paintedItem.addBackup()
+                }
+                held = true
+            }
+            onReleased: {
+                held = false
+            }
+            onPositionChanged: {
+                var mapped = wrapper.mapToItem(mainItem, 0, 0)
+                cursor_rect.x = mouse.x - mapped.x - brushSizeItem.value / 2
+                cursor_rect.y = mouse.y - mapped.y - brushSizeItem.value / 2
+                if (hasImage && held){
+                    if (timing != 10) {
+                        timing += 1
+                    } else {
+                        if (containsCursor) {
+                            timing = 0
+                            if (contrastItem.checked) {
+                                paintedItem.contrastImage(contrastItem.value, mouse.x, mouse.y, brushSizeItem.value)
+                            }
+                            if (sharpenItem.checked) {
+                                paintedItem.sharpenImage(sharpenItem.value, mouse.x, mouse.y, brushSizeItem.value)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+
+    Rectangle {
+        id: cursor_rect
+        border.color: "black"
+        border.width: 1
+        color: "transparent"
+        visible: itemMouseArea.containsCursor
+        width: brushSizeItem.value
+        height: brushSizeItem.value
+    }
+
     Column {
         id: buttonColumn
         spacing: 10
@@ -65,19 +121,10 @@ Window {
             id: openButton
             width: 50
             height: 40
-            text: "Open"
+            font.pointSize: 7
+            text: "Открыть"
             onClicked: {
                 openDialog.open()
-            }
-        }
-        Button {
-            id: backupButton
-            width: 50
-            height: 40
-            text: "Load Backup"
-            enabled: hasImage
-            onClicked: {
-                paintedItem.loadBackup()
             }
         }
 
@@ -85,7 +132,8 @@ Window {
             id: blurButton
             width: 50
             height: 40
-            text: "Blur"
+            font.pointSize: 8
+            text: "Размы-\nтие"
             enabled: hasImage
             checkable: true
         }
@@ -102,7 +150,8 @@ Window {
             id: contrastButton
             width: 50
             height: 40
-            text: "Contrast"
+            font.pointSize: 8
+            text: "Контр-\nаст"
             enabled: hasImage
             checkable: true
         }
@@ -111,15 +160,16 @@ Window {
             anchors.top: contrastButton.bottom
             anchors.left: contrastButton.right
             visible: contrastButton.checked
-            onClicked: {
-                paintedItem.contrastImage(contrastItem.value)
+            onVisibleChanged: {
+                checked = false
             }
         }
         Button {
             id: sharpenButton
             width: 50
             height: 40
-            text: "Sharpen"
+            font.pointSize: 8
+            text: "Резко-\nсть"
             enabled: hasImage
             checkable: true
 
@@ -129,15 +179,16 @@ Window {
             anchors.top: sharpenButton.bottom
             anchors.left: sharpenButton.right
             visible: sharpenButton.checked
-            onClicked: {
-                paintedItem.sharpenImage(sharpenItem.value)
+            onVisibleChanged: {
+                checked = false
             }
         }
         Button {
             id: saveButton
             width: 50
             height: 40
-            text: "Save"
+            font.pointSize: 8
+            text: "Сохра-\nнить"
             enabled: hasImage
             checkable: true
         }
@@ -149,6 +200,57 @@ Window {
             property string quality: saveItem.qualityValue
             onClicked: {
                 saveDialog.open()
+            }
+        }
+    }
+
+    Button {
+        id: brushSizeButton
+        width: 50
+        height: 40
+        text: "Размер \n кисти"
+        checkable: true
+        anchors.top: parent.top
+        anchors.topMargin: 10
+        anchors.right: buttonRow.left
+        anchors.rightMargin: 10
+    }
+
+    BrushSizeItem {
+        id: brushSizeItem
+        anchors.top: brushSizeButton.bottom
+        anchors.right: brushSizeButton.left
+        visible: brushSizeButton.checked
+    }
+
+    Row {
+        id: buttonRow
+        spacing: 10
+        anchors.top: parent.top
+        anchors.topMargin: 10
+        anchors.right: parent.right
+        anchors.rightMargin: 10
+
+        Button {
+            id: backupButton
+            width: 50
+            height: 40
+            font.pointSize: 8
+            text: "Отмен-\nить"
+            enabled: hasImage
+            onClicked: {
+                paintedItem.loadBackup()
+            }
+        }
+        Button {
+            id: redoButton
+            width: 50
+            height: 40
+            font.pointSize: 8
+            text: "Повтор-\nить"
+            enabled: hasImage
+            onClicked: {
+                paintedItem.loadRedo()
             }
         }
     }

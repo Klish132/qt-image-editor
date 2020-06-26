@@ -24,7 +24,7 @@ Item {
 
         Text {
             id: radiusText
-            text: "Blur radius:"
+            text: "Радиус размытия:"
         }
 
         Slider {
@@ -35,8 +35,8 @@ Item {
         }
         Button {
             id: applyButton
-            text: "Apply"
-            width: background.width/2
+            text: "Применить"
+            width: background.width/2 + 10
             height: 20
             onClicked: root.clicked()
         }

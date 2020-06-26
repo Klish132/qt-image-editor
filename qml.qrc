@@ -5,5 +5,6 @@
         <file>qml/ContrastItem.qml</file>
         <file>qml/SaveItem.qml</file>
         <file>qml/SharpenItem.qml</file>
+        <file>qml/BrushSizeItem.qml</file>
     </qresource>
 </RCC>

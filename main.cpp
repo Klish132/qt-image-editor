@@ -2,11 +2,15 @@
 #include <QQmlApplicationEngine>
 #include "painteditem.h"
 
+#include  "testpainteditem.h"
+#include <QtTest/QtTest>
+
 int main(int argc, char *argv[])
 {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
     QGuiApplication app(argc, argv);
+
 
     QQmlApplicationEngine engine;
     qmlRegisterType<PaintedItem>("PaintedItem", 1, 0, "PaintedItem");
@@ -17,6 +21,8 @@ int main(int argc, char *argv[])
             QCoreApplication::exit(-1);
     }, Qt::QueuedConnection);
     engine.load(url);
+
+    QTest::qExec(new TestPaintedItem, argc, argv);
 
     return app.exec();
 }

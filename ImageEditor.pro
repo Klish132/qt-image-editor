@@ -1,7 +1,8 @@
 QT += \
     quick \
     gui \
-    widgets
+    widgets \
+    testlib
 
 CONFIG += \
         c++11 \
@@ -20,7 +21,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        painteditem.cpp
+        painteditem.cpp \
+        testpainteditem.cpp
 
 RESOURCES += qml.qrc
 
@@ -38,5 +40,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 DISTFILES += \
 
 HEADERS += \
-    painteditem.h
+    painteditem.h \
+    testpainteditem.h
 

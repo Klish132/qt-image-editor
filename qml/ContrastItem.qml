@@ -6,7 +6,7 @@ import QtQuick.Dialogs 1.2
 Item {
     id: root
     property int value: contrastSlider.value
-    signal clicked()
+    property bool checked: false
 
     Rectangle {
         id: background
@@ -24,21 +24,24 @@ Item {
 
         Text {
             id: contrastText
-            text: "Contrast value:"
+            text: "Значение контраста:"
         }
 
         Slider {
             id: contrastSlider
             width: 120
-            from: 0
+            from: 100
             to: 255
         }
         Button {
             id: applyButton
-            text: "Apply"
-            width: background.width/2
+            text: "Применить"
+            width: background.width/2 + 10
             height: 20
-            onClicked: root.clicked()
+            checked: root.checked
+            onClicked: {
+                root.checked = !root.checked
+            }
         }
     }
 }

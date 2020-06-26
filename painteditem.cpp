@@ -3,6 +3,7 @@
 #include <QGraphicsBlurEffect>
 #include <QGraphicsPixmapItem>
 #include <math.h>
+#include <tuple>
 
 PaintedItem::PaintedItem(QQuickItem *parent)
     : QQuickPaintedItem(parent)
@@ -25,31 +26,35 @@ void PaintedItem::paint(QPainter *painter)
     painter->drawRect(boundingRect());
 }
 
-void PaintedItem::setImage(QString image)
+bool PaintedItem::operator==(PaintedItem &other) {
+    return currentImage == other.currentImage;
+}
+
+void PaintedItem::setImage(QString image, int width, int height)
 {
     QImage tempImage;
     tempImage.load(image);
-    setWidth(tempImage.width());
-    setHeight(tempImage.height());
+    fitToitem(tempImage.rect().height(), tempImage.rect().width() ,height, width);
     setX(tempImage.rect().x());
     setY(tempImage.rect().y());
-    originalImage = tempImage;
-    currentImage = tempImage;
+    originalImage = tempImage.scaled(m_itemWidth, m_itemHeight);
+    currentImage = tempImage.scaled(m_itemWidth, m_itemHeight);
     backupList.clear();
+    redoList.clear();
     addBackup(currentImage);
     update();
     setPixmap(QPixmap::fromImage(currentImage));
 }
 
-void PaintedItem::fitToitem(int height, int width)
+void PaintedItem::fitToitem(int originalHeight, int originalWidth, int height, int width)
 {
-    if (m_itemWidth > m_itemHeight) {
-        float calc = ((width*100)/(float)m_itemWidth)/100;
-        setHeight(m_itemHeight* calc);
+    if (originalWidth > originalHeight) {
+        float calc = ((width*100)/(float)originalWidth)/100;
+        setHeight(originalHeight * calc);
         setWidth(width);
     } else {
-        float calc = ((height*100)/(float)m_itemHeight)/100;
-        setWidth(m_itemWidth* calc);
+        float calc = ((height*100)/(float)originalHeight)/100;
+        setWidth(originalWidth * calc);
         setHeight(height);
     }
 }
@@ -59,6 +64,9 @@ void PaintedItem::saveImage(QString path, QString quality)
     currentImage.save(path, 0, quality.toInt());
 }
 
+void PaintedItem::addBackup() {
+    addBackup(currentImage);
+}
 void PaintedItem::addBackup(QImage newBackup)
 {
     if (backupList.size() == 11)
@@ -72,10 +80,34 @@ void PaintedItem::loadBackup()
         return;
     else {
         QImage loadedBackup = backupList.front();
+        addRedo(currentImage);
         backupList.pop_front();
         currentImage = loadedBackup;
     }
     update();
+}
+
+void PaintedItem::addRedo(QImage newRedo) {
+    if (redoList.size() == 10)
+        redoList.pop_back();
+    redoList.push_front(newRedo);
+}
+
+void PaintedItem::loadRedo()
+{
+    if (redoList.size() == 0)
+        return;
+    else {
+        QImage loadedRedo = redoList.front();
+        addBackup(currentImage);
+        redoList.pop_front();
+        currentImage = loadedRedo;
+    }
+    update();
+}
+
+void PaintedItem::onMouseReleased() {
+    addBackup(currentImage);
 }
 
 void PaintedItem::setPixmap(QPixmap pixmap)
@@ -152,6 +184,18 @@ void PaintedItem::blurImage(int radius)
     update();
 }
 
+QString PaintedItem::getPixel(int row, int col) {
+
+    QImage img = currentImage.convertToFormat(QImage::Format_ARGB32);
+    QRgb *rowData = (QRgb*)img.scanLine(row);
+    QRgb pixelData = rowData[col];
+    QString result = QString::number(qRed(pixelData)) + ", " +
+            QString::number(qGreen(pixelData)) + ", " +
+            QString::number(qBlue(pixelData)) + ", " +
+            QString::number(qAlpha(pixelData));
+    return result;
+}
+
 int Truncate(int value) {
     if (value > 255)
         return 255;
@@ -161,29 +205,31 @@ int Truncate(int value) {
         return value;
 }
 
-void PaintedItem::contrastImage(int contrast)
+void PaintedItem::contrastImage(int contrast, int x, int y, int brushSize)
 {
-    addBackup(currentImage);
     QImage result = currentImage.convertToFormat(QImage::Format_ARGB32);
-    int r1 = currentImage.rect().top();
-    int r2 = currentImage.rect().bottom();
-    int c1 = currentImage.rect().left();
-    int c2 = currentImage.rect().right();
+    int radius = brushSize/2;
+    int r1 = (y - radius > 0 ? y - radius : 0);
+    int r2 = (y + radius < currentImage.rect().bottom() ? y + radius : currentImage.rect().bottom());
+    int c1 = (x - radius > 0 ? x - radius : 0);
+    int c2 = (x + radius < currentImage.rect().right() ? x + radius : currentImage.rect().right());
 
     float factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
 
     for (int row = r1; row <= r2; row++) {
         QRgb *rowData = (QRgb*)result.scanLine(row);
+        QRgb *prevRowData = (QRgb*)backupList.front().scanLine(row);
         for (int col = c1; col <= c2; col++) {
             QRgb pixelData = rowData[col];
-            int newRed = Truncate(factor * (qRed(pixelData) - 128) + 128);
-            int newGreen = Truncate(factor * (qGreen(pixelData) - 128) + 128);
-            int newBlue = Truncate(factor * (qBlue(pixelData) - 128) + 128);
-            int alpha = qAlpha(pixelData);
-            rowData[col] = qRgba(newRed, newGreen, newBlue, alpha);
+            if (rowData[col] == prevRowData[col]) {
+                int newRed = Truncate(factor * (qRed(pixelData) - 128) + 128);
+                int newGreen = Truncate(factor * (qGreen(pixelData) - 128) + 128);
+                int newBlue = Truncate(factor * (qBlue(pixelData) - 128) + 128);
+                int alpha = qAlpha(pixelData);
+                rowData[col] = qRgba(newRed, newGreen, newBlue, alpha);
+            }
         }
     }
-    qDebug() << "Finished";
     currentImage = result;
     update();
 }
@@ -218,21 +264,24 @@ QRgb filterPixel(int value, int r, int c, QImage &tempImage) {
     return qRgba(Truncate(int(redResult)), Truncate(int(greenResult)), Truncate(int(blueResult)), alphaResult);
 }
 
-void PaintedItem::sharpenImage(int value)
+void PaintedItem::sharpenImage(int value, int x, int y, int brushSize)
 {
-    addBackup(currentImage);
     QImage tempImage = currentImage.convertToFormat(QImage::Format_ARGB32);
     QImage result = currentImage.convertToFormat(QImage::Format_ARGB32);
 
-    int r1 = currentImage.rect().top();
-    int r2 = currentImage.rect().bottom();
-    int c1 = currentImage.rect().left();
-    int c2 = currentImage.rect().right();
+    int radius = brushSize/2;
+    int r1 = (y - radius > 0 ? y - radius : 0);
+    int r2 = (y + radius < currentImage.rect().bottom() ? y + radius : currentImage.rect().bottom());
+    int c1 = (x - radius > 0 ? x - radius : 0);
+    int c2 = (x + radius < currentImage.rect().right() ? x + radius : currentImage.rect().right());
 
     for (int row = r1+1; row <= r2-1; row++) {
         QRgb *rowData = (QRgb*)result.scanLine(row);
+        QRgb *prevRowData = (QRgb*)backupList.front().scanLine(row);
         for (int col = c1+1; col <= c2-1; col++) {
-            rowData[col] = filterPixel(value, row, col, tempImage);
+            if (rowData[col] == prevRowData[col]) {
+                rowData[col] = filterPixel(value, row, col, tempImage);
+            }
         }
     }
     currentImage = result;

@@ -6,7 +6,7 @@ import QtQuick.Dialogs 1.2
 Item {
     id: root
     property int value: sharpenSlider.value
-    signal clicked()
+    property bool checked: false
 
     Rectangle {
         id: background
@@ -24,7 +24,7 @@ Item {
 
         Text {
             id: sharpenText
-            text: "Sharpen:"
+            text: "Значение резкости:"
         }
 
         Slider {
@@ -35,10 +35,13 @@ Item {
         }
         Button {
             id: applyButton
-            text: "Apply"
-            width: background.width/2
+            text: "Применить"
+            width: background.width/2 + 10
             height: 20
-            onClicked: root.clicked()
+            checked: root.checked
+            onClicked: {
+                root.checked = !root.checked
+            }
         }
     }
 }

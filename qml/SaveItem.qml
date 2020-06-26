@@ -24,7 +24,7 @@ Item {
 
         Text {
             id: saveText
-            text: "Quality:"
+            text: "Качество:"
         }
 
         TextField {
@@ -37,8 +37,8 @@ Item {
         }
         Button {
             id: saveButton
-            text: "Save"
-            width: background.width/2
+            text: "Сохранить"
+            width: background.width/2 + 10
             height: 20
             onClicked: root.clicked()
         }
